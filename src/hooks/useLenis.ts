@@ -10,7 +10,9 @@ export function useLenis() {
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     window.scrollTo(0, 0);
 
-    const lenis = new Lenis({ lerp: 0.09 });
+    // autoRaf по умолчанию false — без него Lenis перехватит прокрутку и никуда
+    // не поедет. Пусть крутит себя сам, свой цикл держим только под страховку.
+    const lenis = new Lenis({ lerp: 0.09, autoRaf: true });
 
     // Страховка для анимаций появления: при быстрой прокрутке или переходе по
     // якорю секция может проскочить мимо наблюдателя и навсегда остаться
