@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { CATEGORIES } from '../data/products';
+import { useCatalog } from '../hooks/useCatalog';
 import { useOrder } from './OrderModal';
 
 export default function Catalog() {
+  const CATEGORIES = useCatalog();
   const [active, setActive] = useState(0);
   const [animating, setAnimating] = useState(false);
   const { openOrder } = useOrder();

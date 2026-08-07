@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowUpRight } from 'lucide-react';
-import { CATEGORIES } from '../data/products';
+import { useCatalog } from '../hooks/useCatalog';
 import { useOrder } from './OrderModal';
 
 const fadeUp = (delay: number) => ({
@@ -12,6 +12,7 @@ const fadeUp = (delay: number) => ({
 });
 
 export default function Products() {
+  const CATEGORIES = useCatalog();
   const [active, setActive] = useState(0);
   const { openOrder } = useOrder();
   const cat = CATEGORIES[active];

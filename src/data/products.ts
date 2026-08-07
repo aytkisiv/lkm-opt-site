@@ -5,6 +5,7 @@ export type Product = {
 };
 
 export type ProductCategory = {
+  slug: 'gruntemal' | 'grunt' | 'emal' | 'mastika';
   name: string;
   photo: string;
   desc: string;
@@ -14,6 +15,7 @@ export type ProductCategory = {
 // Ассортимент и цены — со старого сайта lkm-opt (страницы категорий).
 export const CATEGORIES: ProductCategory[] = [
   {
+    slug: 'gruntemal',
     name: 'Грунт-эмаль',
     photo: '/cat-gruntemal.jpg',
     desc: 'Грунтование и финишное покрытие за один проход. Полиуретановые и эпоксидные системы для металлоконструкций.',
@@ -33,6 +35,7 @@ export const CATEGORIES: ProductCategory[] = [
     ],
   },
   {
+    slug: 'grunt',
     name: 'Грунт',
     photo: '/cat-grunt.jpg',
     desc: 'Антикоррозионные грунтовки, в том числе цинкнаполненные — основа долговечного покрытия в агрессивных средах.',
@@ -51,6 +54,7 @@ export const CATEGORIES: ProductCategory[] = [
     ],
   },
   {
+    slug: 'emal',
     name: 'Эмаль',
     photo: '/cat-emal.jpg',
     desc: 'Атмосферостойкие финишные эмали, включая полисилоксановые составы для мостов и промышленных объектов.',
@@ -69,6 +73,7 @@ export const CATEGORIES: ProductCategory[] = [
     ],
   },
   {
+    slug: 'mastika',
     name: 'Мастика',
     photo: '/cat-mastika.jpg',
     desc: 'Гидроизоляционные и защитные мастики для трубопроводов, кровли и подземных конструкций.',
