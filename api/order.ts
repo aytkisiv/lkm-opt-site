@@ -91,14 +91,8 @@ export default async function handler(req: Request): Promise<Response> {
   );
 
   if (!results.some((r) => r.ok)) {
-    return json(
-      {
-        error: 'Не удалось отправить заявку',
-        // подсказка для настройки; убрать, когда бот заработает
-        telegram: results.map((r) => r.description).filter(Boolean),
-      },
-      502
-    );
+    // подробности пишем в логи Vercel, наружу их не отдаём
+    return json({ error: 'Не удалось отправить заявку' }, 502);
   }
   return json({ ok: true });
 }
