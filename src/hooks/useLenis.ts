@@ -11,12 +11,6 @@ export function useLenis() {
     window.scrollTo(0, 0);
 
     const lenis = new Lenis({ lerp: 0.09 });
-    let raf = 0;
-    const loop = (t: number) => {
-      lenis.raf(t);
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
 
     // Страховка для анимаций появления: при быстрой прокрутке или переходе по
     // якорю секция может проскочить мимо наблюдателя и навсегда остаться
@@ -32,7 +26,15 @@ export function useLenis() {
           }
         });
     };
-    lenis.on('scroll', reveal);
+
+    let raf = 0;
+    let frame = 0;
+    const loop = (t: number) => {
+      lenis.raf(t);
+      if (++frame % 10 === 0) reveal();
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
 
     const onClick = (e: MouseEvent) => {
       const a = (e.target as HTMLElement).closest('a[href^="#"]') as HTMLAnchorElement | null;
