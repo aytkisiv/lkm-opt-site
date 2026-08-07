@@ -72,8 +72,8 @@ export default async function handler(req: Request): Promise<Response> {
   keyboard.push([{ text: '📋 Скопировать телефон', copy_text: { text: phone } }]);
 
   const results = await Promise.all(
-    chatIds.map((chat_id) =>
-      fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    chatIds.map(async (chat_id) => {
+      const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -83,12 +83,22 @@ export default async function handler(req: Request): Promise<Response> {
           reply_markup: { inline_keyboard: keyboard },
           disable_web_page_preview: true,
         }),
-      }).then((r) => r.ok)
-    )
+      });
+      const body = (await r.json().catch(() => ({}))) as { description?: string };
+      if (!r.ok) console.error('Telegram error:', r.status, body.description);
+      return { ok: r.ok, description: body.description };
+    })
   );
 
-  if (!results.some(Boolean)) {
-    return json({ error: 'Не удалось отправить заявку' }, 502);
+  if (!results.some((r) => r.ok)) {
+    return json(
+      {
+        error: 'Не удалось отправить заявку',
+        // подсказка для настройки; убрать, когда бот заработает
+        telegram: results.map((r) => r.description).filter(Boolean),
+      },
+      502
+    );
   }
   return json({ ok: true });
 }
