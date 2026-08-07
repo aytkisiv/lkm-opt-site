@@ -6,7 +6,7 @@ type Payload = {
   email?: string;
   phone?: string;
   comment?: string;
-  website?: string; // honeypot: люди его не видят, боты заполняют
+  hp?: string; // honeypot: люди его не видят, боты заполняют
 };
 
 const esc = (s: string) =>
@@ -38,12 +38,15 @@ export default async function handler(req: Request): Promise<Response> {
   }
 
   // ловушка для ботов: заполнено — молча делаем вид, что всё хорошо
-  if (data.website) return json({ ok: true });
+  if (data.hp) return json({ ok: true });
 
   const name = (data.name || '').trim();
   const phone = (data.phone || '').trim();
-  if (name.length < 2 || phone.replace(/\D/g, '').length < 10) {
-    return json({ error: 'Укажите имя и телефон' }, 400);
+  if (name.length < 2) {
+    return json({ error: 'Укажите ваше имя' }, 400);
+  }
+  if (phone.replace(/\D/g, '').length < 10) {
+    return json({ error: 'Проверьте номер телефона — не хватает цифр' }, 400);
   }
 
   const time = new Intl.DateTimeFormat('ru-RU', {

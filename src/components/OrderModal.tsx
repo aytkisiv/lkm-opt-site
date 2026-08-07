@@ -13,6 +13,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [product, setProduct] = useState<string | undefined>();
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
   const sent = status === 'sent';
 
   const openOrder = (p?: string) => {
@@ -46,11 +47,19 @@ export function OrderProvider({ children }: { children: ReactNode }) {
           email: data.get('email'),
           phone: data.get('phone'),
           comment: data.get('comment'),
-          website: data.get('website'),
+          hp: data.get('hp'),
         }),
       });
-      setStatus(res.ok ? 'sent' : 'error');
+      if (res.ok) {
+        setStatus('sent');
+        return;
+      }
+      // показываем настоящую причину, а не общее «не удалось»
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      setErrorMsg(body.error || '');
+      setStatus('error');
     } catch {
+      setErrorMsg('');
       setStatus('error');
     }
   };
@@ -139,9 +148,11 @@ export function OrderProvider({ children }: { children: ReactNode }) {
                   placeholder="Комментарий"
                   className="bg-transparent border-b border-white/20 focus:border-paper outline-none py-3 text-sm text-paper placeholder:text-paper/40 transition-colors resize-none"
                 />
-                {/* ловушка для спам-ботов, человек её не видит */}
+                {/* Ловушка для спам-ботов. Имя нарочно бессмысленное: поле вроде
+                    "website" менеджеры паролей на телефонах заполняют сами, и
+                    живая заявка молча улетала бы в корзину. */}
                 <input
-                  name="website"
+                  name="hp"
                   tabIndex={-1}
                   autoComplete="off"
                   aria-hidden="true"
@@ -160,7 +171,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
 
               {status === 'error' && (
                 <p className="mt-4 text-[12px] text-signal leading-relaxed">
-                  Не удалось отправить заявку. Позвоните нам:{' '}
+                  {errorMsg || 'Не удалось отправить заявку'}. Или позвоните:{' '}
                   <a href="tel:+73432903323" className="underline underline-offset-4">
                     8 (343) 290-33-23
                   </a>
