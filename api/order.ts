@@ -73,6 +73,7 @@ export default async function handler(req: Request): Promise<Response> {
     keyboard.push([{ text: '💬 Написать в WhatsApp', url: `https://wa.me/${digits}` }]);
   }
   keyboard.push([{ text: '📋 Скопировать телефон', copy_text: { text: phone } }]);
+  keyboard.push([{ text: '✅ Взял в работу', callback_data: 'take' }]);
 
   const results = await Promise.all(
     chatIds.map(async (chat_id) => {
