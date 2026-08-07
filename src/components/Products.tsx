@@ -84,6 +84,7 @@ export default function Products() {
           {/* превью категории, следует за курсором по вертикали */}
           <div
             ref={previewRef}
+            data-static
             className="hidden lg:block absolute right-[220px] top-0 z-10 w-[210px] h-[140px] pointer-events-none overflow-hidden border border-white/15"
             style={{
               opacity: 0,

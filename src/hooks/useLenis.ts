@@ -18,6 +18,22 @@ export function useLenis() {
     };
     raf = requestAnimationFrame(loop);
 
+    // Страховка для анимаций появления: при быстрой прокрутке или переходе по
+    // якорю секция может проскочить мимо наблюдателя и навсегда остаться
+    // невидимой. Всё, что уже выше линии взгляда, показываем принудительно.
+    const reveal = () => {
+      const vh = window.innerHeight;
+      document
+        .querySelectorAll<HTMLElement>('main [style*="opacity: 0"]:not([data-static])')
+        .forEach((el) => {
+          if (el.getBoundingClientRect().bottom < vh * 0.85) {
+            el.style.opacity = '1';
+            el.style.transform = 'none';
+          }
+        });
+    };
+    lenis.on('scroll', reveal);
+
     const onClick = (e: MouseEvent) => {
       const a = (e.target as HTMLElement).closest('a[href^="#"]') as HTMLAnchorElement | null;
       if (!a) return;
