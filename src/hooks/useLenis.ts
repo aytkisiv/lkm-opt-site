@@ -27,12 +27,12 @@ export function useLenis() {
         });
     };
 
+    // Lenis 1.3 крутит собственный rAF-цикл, вручную его дёргать не нужно.
     let raf = 0;
     let frame = 0;
-    const loop = (t: number) => {
-      lenis.raf(t);
-      if (++frame % 10 === 0) reveal();
+    const loop = () => {
       raf = requestAnimationFrame(loop);
+      if (++frame % 10 === 0) reveal();
     };
     raf = requestAnimationFrame(loop);
 
