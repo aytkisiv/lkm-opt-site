@@ -12,11 +12,12 @@ export const useOrder = () => useContext(OrderContext);
 export function OrderProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [product, setProduct] = useState<string | undefined>();
-  const [sent, setSent] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const sent = status === 'sent';
 
   const openOrder = (p?: string) => {
     setProduct(p);
-    setSent(false);
+    setStatus('idle');
     setOpen(true);
   };
   const close = () => setOpen(false);
@@ -31,22 +32,27 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     };
   }, [open]);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
-    const subject = product ? `Заказ: ${product}` : 'Заявка с сайта ЛКМ ОПТ';
-    const body = [
-      product ? `Позиция: ${product}` : null,
-      `Имя: ${data.get('name')}`,
-      `Email: ${data.get('email')}`,
-      `Телефон: ${data.get('phone')}`,
-      `Комментарий: ${data.get('comment')}`,
-    ]
-      .filter(Boolean)
-      .join('\n');
-    // без бэкенда: открываем почтовый клиент с готовым письмом
-    window.location.href = `mailto:lkm-opt2024@mail.ru?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    setSent(true);
+    setStatus('sending');
+    try {
+      const res = await fetch('/api/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product,
+          name: data.get('name'),
+          email: data.get('email'),
+          phone: data.get('phone'),
+          comment: data.get('comment'),
+          website: data.get('website'),
+        }),
+      });
+      setStatus(res.ok ? 'sent' : 'error');
+    } catch {
+      setStatus('error');
+    }
   };
 
   return (
@@ -86,10 +92,11 @@ export function OrderProvider({ children }: { children: ReactNode }) {
                 <Check className="w-5 h-5 text-paper" />
               </div>
               <div className="font-display text-2xl font-medium mb-3">
-                Заявка сформирована
+                Заявка отправлена
               </div>
               <p className="text-sm text-paper/60 leading-relaxed max-w-xs mx-auto">
-                Откроется почтовый клиент с готовым письмом. Или позвоните нам:{' '}
+                Менеджер свяжется с вами в рабочее время. Если вопрос срочный —
+                звоните:{' '}
                 <a href="tel:+73432903323" className="text-paper underline underline-offset-4">
                   8 (343) 290-33-23
                 </a>
@@ -132,15 +139,33 @@ export function OrderProvider({ children }: { children: ReactNode }) {
                   placeholder="Комментарий"
                   className="bg-transparent border-b border-white/20 focus:border-paper outline-none py-3 text-sm text-paper placeholder:text-paper/40 transition-colors resize-none"
                 />
+                {/* ловушка для спам-ботов, человек её не видит */}
+                <input
+                  name="website"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                  className="absolute opacity-0 pointer-events-none h-0 w-0"
+                />
               </div>
 
               <button
                 type="submit"
-                className="group mt-8 w-full flex items-center justify-between bg-paper text-ink font-mono text-[11px] font-medium uppercase tracking-[0.2em] px-6 py-4 hover:bg-white transition-colors"
+                disabled={status === 'sending'}
+                className="group mt-8 w-full flex items-center justify-between bg-paper text-ink font-mono text-[11px] font-medium uppercase tracking-[0.2em] px-6 py-4 hover:bg-white transition-colors disabled:opacity-60"
               >
-                Отправить
+                {status === 'sending' ? 'Отправляем…' : 'Отправить'}
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </button>
+
+              {status === 'error' && (
+                <p className="mt-4 text-[12px] text-signal leading-relaxed">
+                  Не удалось отправить заявку. Позвоните нам:{' '}
+                  <a href="tel:+73432903323" className="underline underline-offset-4">
+                    8 (343) 290-33-23
+                  </a>
+                </p>
+              )}
 
               <p className="mt-4 text-[11px] text-paper/40 leading-relaxed">
                 Нажимая «Отправить», вы соглашаетесь с политикой конфиденциальности.
