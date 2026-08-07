@@ -12,7 +12,7 @@ export const CATS = [
 export const BTN = {
   price: '📋 Прайс',
   search: '🔍 Найти товар',
-  site: '🌐 Сайт',
+  clients: '👥 Клиенты',
   admin: '⚙️ Админка',
 };
 
@@ -20,7 +20,7 @@ export const BTN = {
 export const KEYBOARD = {
   keyboard: [
     [{ text: BTN.price }, { text: BTN.search }],
-    [{ text: BTN.site }, { text: BTN.admin }],
+    [{ text: BTN.clients }, { text: BTN.admin }],
   ],
   resize_keyboard: true,
   is_persistent: true,
@@ -60,6 +60,63 @@ export const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 export type Item = { name: string; note: string | null; price: number; category: string };
+
+export type Order = {
+  id: string;
+  product: string | null;
+  name: string;
+  phone: string;
+  email: string | null;
+  comment: string | null;
+  status: 'new' | 'in_work' | 'done';
+  taken_by: string | null;
+  created_at: string;
+};
+
+/**
+ * Запросы к таблице заявок идут служебным ключом: в ней персональные данные
+ * клиентов, и публичному ключу с сайта доступ к ней закрыт полностью.
+ */
+export async function sbAdmin(path: string, init: RequestInit = {}) {
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return fetch(`${url}/rest/v1/${path}`, {
+    ...init,
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+      ...(init.headers || {}),
+    },
+  });
+}
+
+export const STATUS: Record<string, string> = {
+  new: '🆕 новая',
+  in_work: '⏳ в работе',
+  done: '✅ завершена',
+};
+
+export function when(iso: string) {
+  return new Intl.DateTimeFormat('ru-RU', {
+    timeZone: 'Asia/Yekaterinburg',
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso));
+}
+
+export function fmtOrder(o: Order) {
+  return (
+    `👤 <b>${esc(o.name)}</b> · <code>${esc(o.phone)}</code>\n` +
+    (o.product ? `📦 ${esc(o.product)}\n` : '') +
+    (o.comment ? `💬 <i>${esc(o.comment)}</i>\n` : '') +
+    `🕐 ${when(o.created_at)} · ${STATUS[o.status] || o.status}` +
+    (o.taken_by ? ` (${esc(o.taken_by)})` : '')
+  );
+}
 
 export async function fetchProducts(): Promise<Item[]> {
   const url = process.env.VITE_SUPABASE_URL;

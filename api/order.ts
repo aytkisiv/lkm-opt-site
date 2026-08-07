@@ -1,3 +1,5 @@
+import { sbAdmin } from './_tg';
+
 export const config = { runtime: 'edge' };
 
 type Payload = {
@@ -49,6 +51,32 @@ export default async function handler(req: Request): Promise<Response> {
     return json({ error: 'Проверьте номер телефона — не хватает цифр' }, 400);
   }
 
+  // сохраняем заявку в базу — из неё бот показывает раздел «Клиенты».
+  // Если хранилище не настроено или недоступно, заявка всё равно уйдёт в чат:
+  // потерять обращение клиента из-за проблем с базой недопустимо.
+  let orderId = '';
+  try {
+    const res = await sbAdmin('orders', {
+      method: 'POST',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({
+        product: data.product?.trim() || null,
+        name,
+        phone,
+        email: data.email?.trim() || null,
+        comment: data.comment?.trim() || null,
+      }),
+    });
+    if (res?.ok) {
+      const [row] = (await res.json()) as { id: string }[];
+      orderId = row?.id || '';
+    } else if (res) {
+      console.error('Не удалось сохранить заявку:', await res.text());
+    }
+  } catch (e) {
+    console.error('Ошибка записи заявки:', e);
+  }
+
   const time = new Intl.DateTimeFormat('ru-RU', {
     timeZone: 'Asia/Yekaterinburg',
     day: '2-digit',
@@ -73,7 +101,9 @@ export default async function handler(req: Request): Promise<Response> {
     keyboard.push([{ text: '💬 Написать в WhatsApp', url: `https://wa.me/${digits}` }]);
   }
   keyboard.push([{ text: '📋 Скопировать телефон', copy_text: { text: phone } }]);
-  keyboard.push([{ text: '✅ Взял в работу', callback_data: 'take' }]);
+  keyboard.push([
+    { text: '✅ Взял в работу', callback_data: orderId ? 'take:' + orderId : 'take' },
+  ]);
 
   const results = await Promise.all(
     chatIds.map(async (chat_id) => {
