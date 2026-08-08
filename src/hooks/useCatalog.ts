@@ -3,8 +3,8 @@ import { CATEGORIES, type ProductCategory } from '../data/products';
 import { supabase } from '../lib/supabase';
 
 /**
- * Прайс из базы. Если база не подключена, недоступна или пуста —
- * возвращаем встроенный прайс из кода: пустой каталог посетитель
+ * Каталог из базы. Если база не подключена, недоступна или в ней нет товаров —
+ * возвращаем встроенный каталог из кода: пустой прайс посетитель
  * не увидит ни при каких обстоятельствах.
  */
 export function useCatalog(): ProductCategory[] {
@@ -14,25 +14,33 @@ export function useCatalog(): ProductCategory[] {
     if (!supabase) return;
     let alive = true;
 
-    supabase
-      .from('products')
-      .select('category,name,note,price,sort')
-      .order('sort')
-      .then(({ data, error }) => {
-        if (!alive || error || !data || data.length === 0) return;
-        setCategories(
-          CATEGORIES.map((c) => ({
-            ...c,
-            products: data
-              .filter((p) => p.category === c.slug)
-              .map((p) => ({
-                name: p.name,
-                note: p.note ?? undefined,
-                price: p.price,
-              })),
+    (async () => {
+      const [cats, prods] = await Promise.all([
+        supabase.from('categories').select('slug,name,descr,photo,sort').order('sort'),
+        supabase.from('products').select('category,name,note,price,sort').order('sort'),
+      ]);
+      if (!alive || prods.error || !prods.data?.length) return;
+
+      // группы берём из базы, если они там заведены, иначе оставляем встроенные
+      const base: ProductCategory[] = cats.data?.length
+        ? cats.data.map((c) => ({
+            slug: c.slug,
+            name: c.name,
+            desc: c.descr || '',
+            photo: c.photo || CATEGORIES.find((s) => s.slug === c.slug)?.photo || CATEGORIES[0].photo,
+            products: [],
           }))
-        );
-      });
+        : CATEGORIES;
+
+      setCategories(
+        base.map((c) => ({
+          ...c,
+          products: prods.data
+            .filter((p) => p.category === c.slug)
+            .map((p) => ({ name: p.name, note: p.note ?? undefined, price: p.price })),
+        }))
+      );
+    })();
 
     return () => {
       alive = false;

@@ -58,6 +58,7 @@ async function onMessage(msg: any) {
       parse_mode: 'HTML',
     });
   if (text === BTN.clients || text === '/clients') return sendOrders(chatId, 'all');
+  if (text === BTN.stats || text === '/stats') return sendStats(chatId);
   if (text === BTN.admin)
     return void tg('sendMessage', {
       chat_id: chatId,
@@ -174,6 +175,46 @@ async function sendOrders(chatId: number, filter: string, messageId?: number) {
   };
   if (messageId) await tg('editMessageText', { ...payload, message_id: messageId });
   else await tg('sendMessage', payload);
+}
+
+async function sendStats(chatId: number) {
+  const res = await sbAdmin('orders?select=product,status,created_at');
+  if (!res) {
+    await tg('sendMessage', {
+      chat_id: chatId,
+      text: 'Хранение заявок не настроено: не задан служебный ключ базы.',
+    });
+    return;
+  }
+  const all = (await res.json()) as Order[];
+  const now = Date.now();
+  const since = (d: number) => all.filter((o) => now - +new Date(o.created_at) < d * 86400000).length;
+  const cnt = (s: string) => all.filter((o) => o.status === s).length;
+
+  const top = Object.entries(
+    all.reduce<Record<string, number>>((a, o) => {
+      const k = o.product?.trim();
+      if (k) a[k] = (a[k] || 0) + 1;
+      return a;
+    }, {})
+  )
+    .sort((x, y) => y[1] - x[1])
+    .slice(0, 5);
+
+  await tg('sendMessage', {
+    chat_id: chatId,
+    parse_mode: 'HTML',
+    text:
+      `<b>📊 Сводка по заявкам</b>\n\n` +
+      `За сутки: <b>${since(1)}</b>\nЗа неделю: <b>${since(7)}</b>\n` +
+      `За месяц: <b>${since(30)}</b>\nВсего: <b>${all.length}</b>\n\n` +
+      `🆕 Не взяты: <b>${cnt('new')}</b>\n⏳ В работе: <b>${cnt('in_work')}</b>\n` +
+      `✅ Завершены: <b>${cnt('done')}</b>` +
+      (top.length
+        ? `\n\n<b>Чаще всего спрашивают:</b>\n` +
+          top.map(([n, c], i) => `${i + 1}. ${esc(n)} — ${c}`).join('\n')
+        : ''),
+  });
 }
 
 async function sendOrderCard(chatId: number, id: string) {

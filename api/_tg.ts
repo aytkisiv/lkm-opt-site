@@ -13,6 +13,7 @@ export const BTN = {
   price: '📋 Прайс',
   search: '🔍 Найти товар',
   clients: '👥 Клиенты',
+  stats: '📊 Сводка',
   admin: '⚙️ Админка',
 };
 
@@ -20,7 +21,8 @@ export const BTN = {
 export const KEYBOARD = {
   keyboard: [
     [{ text: BTN.price }, { text: BTN.search }],
-    [{ text: BTN.clients }, { text: BTN.admin }],
+    [{ text: BTN.clients }, { text: BTN.stats }],
+    [{ text: BTN.admin }],
   ],
   resize_keyboard: true,
   is_persistent: true,

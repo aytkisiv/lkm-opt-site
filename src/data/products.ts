@@ -5,7 +5,7 @@ export type Product = {
 };
 
 export type ProductCategory = {
-  slug: 'gruntemal' | 'grunt' | 'emal' | 'mastika';
+  slug: string;
   name: string;
   photo: string;
   desc: string;

@@ -9,6 +9,26 @@ const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
  */
 export const supabase = url && key ? createClient(url, key) : null;
 
+export type DbCategory = {
+  slug: string;
+  name: string;
+  descr: string;
+  photo: string;
+  sort: number;
+};
+
+export type DbOrder = {
+  id: string;
+  product: string | null;
+  name: string;
+  phone: string;
+  email: string | null;
+  comment: string | null;
+  status: 'new' | 'in_work' | 'done';
+  taken_by: string | null;
+  created_at: string;
+};
+
 export type DbProduct = {
   id: string;
   category: string;

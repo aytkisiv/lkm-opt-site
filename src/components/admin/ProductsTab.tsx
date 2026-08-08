@@ -1,0 +1,185 @@
+import { useEffect, useState } from 'react';
+import { Trash2, Plus, Check } from 'lucide-react';
+import { supabase, type DbCategory, type DbProduct } from '../../lib/supabase';
+import { CATEGORIES } from '../../data/products';
+import { btnGhost, btnLight, input } from './ui';
+
+type Row = DbProduct & { dirty?: boolean };
+
+export default function ProductsTab({
+  cats,
+  flash,
+}: {
+  cats: DbCategory[];
+  flash: (t: string) => void;
+}) {
+  const [rows, setRows] = useState<Row[]>([]);
+  const [cat, setCat] = useState(cats[0]?.slug ?? '');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    load();
+  }, []);
+  useEffect(() => {
+    if (cats.length && !cats.some((c) => c.slug === cat)) setCat(cats[0].slug);
+  }, [cats]);
+
+  async function load() {
+    const { data, error } = await supabase!.from('products').select('*').order('sort');
+    if (error) return flash('Не удалось загрузить: ' + error.message);
+    setRows((data as DbProduct[]) || []);
+  }
+
+  async function save(row: Row) {
+    if (!row.name.trim()) return flash('У товара должно быть название');
+    setBusy(true);
+    const { error } = await supabase!
+      .from('products')
+      .update({ name: row.name.trim(), note: row.note?.trim() || null, price: row.price })
+      .eq('id', row.id);
+    setBusy(false);
+    if (error) return flash('Ошибка сохранения: ' + error.message);
+    setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, dirty: false } : r)));
+    flash('Сохранено');
+  }
+
+  async function remove(row: Row) {
+    if (!confirm(`Удалить «${row.name}»? Отменить будет нельзя.`)) return;
+    setBusy(true);
+    const { error } = await supabase!.from('products').delete().eq('id', row.id);
+    setBusy(false);
+    if (error) return flash('Ошибка удаления: ' + error.message);
+    setRows((rs) => rs.filter((r) => r.id !== row.id));
+    flash('Товар удалён');
+  }
+
+  async function add() {
+    setBusy(true);
+    const maxSort = Math.max(0, ...rows.filter((r) => r.category === cat).map((r) => r.sort));
+    const { data, error } = await supabase!
+      .from('products')
+      .insert({ category: cat, name: 'Новый товар', price: 0, sort: maxSort + 1 })
+      .select()
+      .single();
+    setBusy(false);
+    if (error) return flash('Ошибка добавления: ' + error.message);
+    setRows((rs) => [...rs, data as DbProduct]);
+    flash('Впишите название и цену, затем сохраните');
+  }
+
+  async function seed() {
+    if (!confirm('Загрузить в базу прайс из кода сайта? Делается один раз.')) return;
+    setBusy(true);
+    const payload = CATEGORIES.flatMap((c) =>
+      c.products.map((p, i) => ({
+        category: c.slug,
+        name: p.name,
+        note: p.note ?? null,
+        price: p.price,
+        sort: i,
+      }))
+    );
+    const { error } = await supabase!.from('products').insert(payload);
+    setBusy(false);
+    if (error) return flash('Ошибка импорта: ' + error.message);
+    await load();
+    flash(`Загружено позиций: ${payload.length}`);
+  }
+
+  const edit = (id: string, patch: Partial<DbProduct>) =>
+    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch, dirty: true } : r)));
+
+  const visible = rows.filter((r) => r.category === cat);
+
+  return (
+    <>
+      {rows.length === 0 && (
+        <div className="border border-white/15 p-6 mb-8">
+          <p className="text-sm text-paper/70 mb-4">
+            База пустая. Можно перенести в неё прайс, который зашит в код сайта.
+          </p>
+          <button onClick={seed} disabled={busy} className={btnLight}>
+            Импортировать прайс из кода
+          </button>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2 mb-6">
+        {cats.map((c) => (
+          <button
+            key={c.slug}
+            onClick={() => setCat(c.slug)}
+            className={`font-mono text-[10px] uppercase tracking-[0.18em] px-4 py-2.5 border transition-colors ${
+              c.slug === cat
+                ? 'bg-paper text-ink border-paper'
+                : 'border-white/15 text-paper/50 hover:text-paper'
+            }`}
+          >
+            {c.name}
+            <span className="ml-2 opacity-60">
+              {rows.filter((r) => r.category === c.slug).length}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div className="hidden sm:grid grid-cols-[1fr_1fr_110px_150px] gap-3 px-3 pb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-paper/40">
+        <span>Название</span>
+        <span>Уточнение</span>
+        <span>Цена, ₽/кг</span>
+        <span />
+      </div>
+
+      <div className="border-t border-white/10">
+        {visible.map((row) => (
+          <div
+            key={row.id}
+            className="grid sm:grid-cols-[1fr_1fr_110px_150px] gap-3 items-center border-b border-white/10 px-3 py-3"
+          >
+            <input
+              value={row.name}
+              onChange={(e) => edit(row.id, { name: e.target.value })}
+              className={input}
+            />
+            <input
+              value={row.note ?? ''}
+              placeholder="—"
+              onChange={(e) => edit(row.id, { note: e.target.value })}
+              className={`${input} text-paper/70 placeholder:text-paper/25`}
+            />
+            <input
+              type="number"
+              min={0}
+              value={row.price}
+              onChange={(e) => edit(row.id, { price: Number(e.target.value) })}
+              className={`${input} font-mono`}
+            />
+            <div className="flex items-center gap-2 justify-end">
+              {row.dirty && (
+                <button onClick={() => save(row)} disabled={busy} className={btnLight}>
+                  <Check className="w-3.5 h-3.5 inline mr-1.5" />
+                  Сохранить
+                </button>
+              )}
+              <button
+                onClick={() => remove(row)}
+                disabled={busy}
+                aria-label="Удалить"
+                className="p-2 text-paper/40 hover:text-signal transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ))}
+        {visible.length === 0 && rows.length > 0 && (
+          <p className="text-sm text-paper/45 py-6">В этой группе пока нет товаров.</p>
+        )}
+      </div>
+
+      <button onClick={add} disabled={busy || !cat} className={`${btnGhost} mt-6 inline-flex items-center gap-2`}>
+        <Plus className="w-4 h-4" /> Добавить товар
+      </button>
+    </>
+  );
+}
